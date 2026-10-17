@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1b2a">
+<title>Dart Scorer – Mobile</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%; width: 100%; overflow: hidden;
+    background: #050505;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  body {
+    color: #eee;
+    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    display: flex; overscroll-behavior: none;
+  }
+
+  .app {
+    width: 100%; height: 100%;
+    background: #0d1b2a;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .app::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,0.025) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(255,255,255,0.025) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.025) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.025) 75%);
+    background-size: 24px 24px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ============ KOPFBEREICH ============ */
+  .header {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: rgba(0,0,0,0.25);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    position: relative; z-index: 2;
+    flex-shrink: 0; gap: 8px; min-height: 48px;
+  }
+  .header-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .header-right {
+    display: flex; align-items: center; gap: 10px;
+    flex: 1; justify-content: flex-end; min-width: 0;
+  }
+  .bt-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.75em; color: #a0c4ff;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 12px; border-radius: 20px;
+    cursor: pointer; transition: all 0.2s;
+    border: 1px solid #1b263b;
+    text-transform: uppercase; letter-spacing: 1px;
+    min-height: 36px; font-weight: bold;
+  }
+  .bt-status:active { transform: scale(0.95); border-color: #0f0; }
+  .bt-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #666; transition: all 0.3s; flex-shrink: 0;
+  }
+  .bt-dot.connected { background: #0f0; box-shadow: 0 0 10px #0f0; }
+  .bt-dot.connecting { background: #ff0; box-shadow: 0 0 10px #ff0; animation: blink 0.5s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .player-name {
+    font-size: 1.05em; font-weight: bold;
+    letter-spacing: 2px; color: #fff;
+    text-shadow: 0 0 10px rgba(0,150,255,0.5);
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 45vw;
+  }
+  .stats {
+    text-align: right; font-size: 0.75em; color: #a0c4ff;
+    line-height: 1.3; text-transform: uppercase;
+    letter-spacing: 1px; white-space: nowrap; flex-shrink: 0;
+  }
+  .stats .stat-val {
+    color: #fff; font-weight: bold; font-family: 'Courier New', monospace;
+  }
+
+  /* ============ HAUPTBEREICH ============ */
+  .main-area {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative; padding: 4px 8px 6px;
+    min-height: 0; z-index: 1;
+  }
+  .top-badges {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 4px; flex-wrap: wrap;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .round-banner {
+    font-size: clamp(0.75em, 2vh, 1.15em);
+    font-weight: bold; color: #a0c4ff;
+    letter-spacing: 4px; text-transform: uppercase;
+    padding: 4px 18px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(160,196,255,0.25);
+    border-radius: 20px;
+    text-shadow: 0 0 12px rgba(160,196,255,0.6);
+    flex-shrink: 0;
+  }
+  .round-banner .rn {
+    color: #fff; font-size: 1.3em;
+    font-family: 'Courier New', monospace;
+    margin-left: 6px; text-shadow: 0 0 10px #fff;
+  }
+
+  .mode-badge {
+    font-size: clamp(0.65em, 1.6vh, 0.95em);
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(160,196,255,0.25);
+    color: #a0c4ff;
+    flex-shrink: 0;
+  }
+  .mode-badge .di, .mode-badge .do {
+    color: #ffaa00;
+    text-shadow: 0 0 8px rgba(255,170,0,0.6);
+  }
+  .mode-badge .off {
+    color: #666;
+  }
+
+  .main-content {
+    flex: 1; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 0; position: relative;
+  }
+  .main-score {
+    font-size: clamp(4em, 22vh, 14em);
+    font-weight: 900;
+    font-family: 'Arial Black', Arial, sans-serif;
+    color: #ffffff;
+    text-shadow: 0 0 30px rgba(0, 150, 255, 0.7),
+                 0 0 60px rgba(0, 150, 255, 0.4);
+    line-height: 1; transition: all 0.2s;
+  }
+
+  /* Hinweis "öffne mit Doppel" */
+  .double-in-hint {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(0.7em, 1.8vh, 1em);
+    font-weight: bold;
+    color: #ffaa00;
+    text-shadow: 0 0 12px rgba(255,170,0,0.8);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    animation: hintPulse 1.4s infinite ease-in-out;
+    white-space: nowrap;
+    pointer-events: none;
+    padding: 4px 14px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 12px;
+    border: 1px solid rgba(255,170,0,0.4);
+    display: none;
+  }
+  .double-in-hint.show { display: block; }
+  @keyframes hintPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+
+  /* ============ CRICKET-TABELLE ============ */
+  .cricket-board {
+    width: 100%; height: 100%; max-width: 100%;
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid #1b263b; border-radius: 10px;
+    padding: 4px 6px;
+    box-shadow: 0 0 20px rgba(0,150,255,0.15);
+    overflow: auto; display: flex; flex-direction: column;
+    justify-content: center;
+  }
+  .cricket-table { width: 100%; border-collapse: collapse; }
+  .cricket-table th, .cricket-table td {
+    padding: 3px 3px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 0.85em;
+  }
+  .cricket-table th {
+    color: #ff4444; font-size: 0.7em;
+    letter-spacing: 1px; text-transform: uppercase;
+    border-bottom: 2px solid #ff4444; padding-bottom: 4px;
+  }
+  .cricket-table th.num-col, .cricket-table td.num-col {
+    width: 45px; color: #fff; font-weight: bold; font-size: 0.95em;
+    background: rgba(255,255,255,0.04); border-radius: 4px 0 0 4px;
+  }
+  .cricket-table td.num-col { color: #a0c4ff; }
+  .cricket-table td.marks {
+    font-size: 0.95em; padding: 2px 3px;
+    white-space: nowrap; line-height: 1.3;
+  }
+  .cricket-table td.marks .hit {
+    font-size: 1em;
+    filter: drop-shadow(0 0 4px rgba(0,255,0,0.4));
+    opacity: 0.85;
+  }
+  .cricket-table td.marks.closed .hit {
+    filter: drop-shadow(0 0 8px #00ff88) drop-shadow(0 0 14px rgba(0,255,136,0.7));
+    opacity: 1;
+  }
+  .cricket-table td.marks .extra {
+    display: inline-block; margin-left: 4px; padding-left: 4px;
+    border-left: 1px dashed rgba(255,170,0,0.4);
+    filter: drop-shadow(0 0 6px rgba(255,170,0,0.8));
+  }
+  .cricket-table td.marks .extra .pts {
+    color: #ffaa00; font-family: 'Courier New', monospace;
+    font-weight: bold; font-size: 0.85em; margin-left: 2px;
+    text-shadow: 0 0 8px #ffaa00;
+  }
+  .cricket-table tr.closed-row td.num-col { color: #555; text-decoration: line-through; }
+  .cricket-table td.points {
+    font-size: 1em; font-weight: bold; color: #fff;
+    font-family: 'Courier New', monospace;
+  }
+  .cricket-table tr.active-col { background: rgba(0,255,0,0.06); }
+  .cricket-table .player-header.active-col { color: #0f0; text-shadow: 0 0 10px #0f0; }
+  .cricket-table .player-header.winner-col { color: gold; text-shadow: 0 0 10px gold; }
+
+  /* ============ SPIELERLEISTE ============ */
+  .bottom-panel {
+    display: flex; height: 72px;
+    flex-shrink: 0; position: relative; z-index: 2;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .player-panel {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    font-weight: bold; transition: all 0.3s;
+    padding: 3px; border-right: 1px solid rgba(0,0,0,0.3);
+    min-width: 0;
+    position: relative;
+  }
+  .player-panel:last-child { border-right: none; }
+  .player-panel.blue { background: #1a3a6b; color: #fff; }
+  .player-panel.red { background: #6b1a1a; color: #fff; }
+  .player-panel.active {
+    box-shadow: inset 0 0 20px rgba(0,255,0,0.6);
+    border-top: 3px solid #0f0;
+  }
+  .player-panel.winner {
+    box-shadow: inset 0 0 30px gold;
+    border-top: 3px solid gold;
+    animation: winnerPanelPulse 1.4s infinite ease-in-out;
+  }
+  @keyframes winnerPanelPulse {
+    0%, 100% { box-shadow: inset 0 0 30px gold; }
+    50% { box-shadow: inset 0 0 60px gold, 0 0 20px gold; }
+  }
+  /* Nicht geöffnet (Double-In) */
+  .player-panel.not-opened .p-score {
+    opacity: 0.32;
+    filter: grayscale(0.7);
+  }
+  .player-panel.not-opened .p-name::after {
+    content: ' 🔒';
+    font-size: 0.85em;
+  }
+
+  .player-panel .p-name {
+    font-size: 0.7em; opacity: 0.85;
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 100%;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .player-panel .p-score {
+    font-size: 1.55em;
+    font-family: 'Courier New', monospace;
+    font-weight: 900; line-height: 1.1;
+    transition: opacity 0.3s;
+  }
+  .bottom-panel.solo .player-panel { background: #1a3a6b; }
+  .bottom-panel.solo .player-panel .p-score { font-size: 1.9em; }
+  .bottom-panel.solo .player-panel .p-name { font-size: 0.85em; }
+
+  /* ============ MANUELLE EINGABE ============ */
+  .manual-input {
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 5px;
+    padding: 8px 8px 10px;
+    background: rgba(0,0,0,0.4);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 3; flex-shrink: 0;
+    opacity: 1; max-height: 45vh;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .manual-input.hidden { display: none !important; }
+  .manual-input button {
+    background: rgba(26,58,107,0.95); color: #fff;
+    border: 1px solid #2a4a7b;
+    min-width: 46px; height: 46px; padding: 0 10px;
+    border-radius: 8px; cursor: pointer;
+    font-size: 0.95em; font-weight: bold;
+    transition: all 0.1s; text-transform: uppercase;
+    letter-spacing: 0.5px; font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .manual-input button:active {
+    background: #0f0 !important;
+    color: #000 !important; transform: scale(0.92);
+  }
+  .manual-input button.mult { background: rgba(107,26,26,0.95); }
+  .manual-input button.mult.active {
+    background: #ff4444; box-shadow: 0 0 12px #ff0000; color: #fff;
+  }
+  .manual-input button.wide { min-width: 80px; }
+  .manual-input .sep {
+    width: 1px; height: 32px;
+    background: rgba(255,255,255,0.15); margin: 0 3px;
+  }
+  .manual-input button.undo {
+    background: rgba(200,150,0,0.95); border-color: #fa0;
+  }
+
+  /* ============ SETUP OVERLAY ============ */
+  .overlay {
+    position: absolute; inset: 0;
+    background: rgba(5, 10, 20, 0.97);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    gap: 12px; z-index: 10; padding: 20px 16px;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .overlay h1 {
+    color: #fff; font-size: 1.8em; letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(0,150,255,0.8);
+    text-align: center;
+  }
+  .overlay h1 span { color: #ff4444; }
+  .overlay h2 {
+    color: #a0c4ff; font-size: 0.85em;
+    letter-spacing: 3px; text-transform: uppercase;
+    margin-top: 4px; opacity: 0.7;
+  }
+  .setup-row {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    justify-content: center; width: 100%; max-width: 500px;
+  }
+  .setup-row button, .setup-row select {
+    background: #1a3a6b; color: #fff;
+    border: 2px solid #2a4a7b;
+    padding: 14px 26px; border-radius: 12px;
+    font-size: 1.05em; cursor: pointer;
+    transition: all 0.15s; font-weight: bold;
+    text-transform: uppercase; letter-spacing: 1px;
+    font-family: inherit; min-height: 52px;
+    flex: 1; min-width: 90px;
+  }
+  .setup-row button:active, .setup-row select:active {
+    transform: scale(0.96); border-color: #0f0;
+  }
+  .setup-row button.active {
+    background: #0f0; color: #000;
+    border-color: #0f0; box-shadow: 0 0 20px #0f0;
+  }
+  .setup-row.mode-row {
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 10px;
+    border: 1px solid rgba(160,196,255,0.15);
+    transition: opacity 0.3s;
+  }
+  .setup-row.mode-row.hidden {
+    display: none;
+  }
+  .setup-row.mode-row label {
+    color: #a0c4ff;
+    font-size: 0.7em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+    text-align: center;
+    font-weight: bold;
+  }
+  .mode-col {
+    flex: 1;
+    min-width: 130px;
+  }
+  .mode-col select {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    font-size: 0.9em;
+    min-height: 46px;
+  }
+  .start-btn {
+    background: #0a0 !important; color: #fff !important;
+    border-color: #0f0 !important;
+    padding: 18px 40px !important;
+    font-size: 1.2em !important;
+    margin-top: 10px; flex: none !important;
+    width: 100%; min-height: 60px;
+    letter-spacing: 3px;
+  }
+  .start-btn:active { background: #0c0 !important; }
+
+  /* ============ GEWINNER OVERLAY ============ */
+  .winner-overlay {
+    position: absolute; inset: 0;
+    background: rgba(5, 10, 20, 0.93);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    z-index: 30;
+    padding: 24px 16px;
+    text-align: center;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .winner-overlay.show {
+    display: flex;
+    animation: winnerFadeIn 0.35s ease-out;
+  }
+  @keyframes winnerFadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .trophy {
+    font-size: clamp(3em, 12vh, 6em);
+    animation: trophyBounce 1s infinite ease-in-out;
+    filter: drop-shadow(0 0 25px gold);
+  }
+  @keyframes trophyBounce {
+    0%, 100% { transform: scale(1) rotate(-3deg); }
+    50%      { transform: scale(1.12) rotate(3deg); }
+  }
+  .winner-title {
+    font-size: clamp(1.4em, 4vh, 2.2em);
+    font-weight: 700;
+    color: #a0c4ff;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    text-shadow: 0 0 15px rgba(160,196,255,0.7);
+  }
+  .winner-name {
+    font-size: clamp(2.2em, 8vh, 4.5em);
+    font-weight: 900;
+    color: gold;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    text-shadow: 0 0 30px gold, 0 0 60px rgba(255,215,0,0.5);
+    animation: winnerBlink 1.1s infinite ease-in-out;
+    line-height: 1.1;
+    padding: 10px 0;
+  }
+  @keyframes winnerBlink {
+    0%, 49%   { opacity: 1;   transform: scale(1); }
+    50%, 100% { opacity: 0.35; transform: scale(0.97); }
+  }
+  .winner-stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 0.95em;
+    color: #a0c4ff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: rgba(0,0,0,0.5);
+    padding: 10px 22px;
+    border-radius: 12px;
+    border: 1px solid rgba(160,196,255,0.2);
+  }
+  .winner-stats .stat-box { text-align: center; }
+  .winner-stats .stat-lbl { font-size: 0.75em; opacity: 0.7; }
+  .winner-stats .stat-num {
+    display: block;
+    font-size: 1.4em;
+    color: #fff;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 8px rgba(255,255,255,0.4);
+  }
+  .new-game-btn {
+    background: linear-gradient(180deg, #0a0 0%, #070 100%);
+    color: #fff;
+    border: 2px solid #0f0;
+    padding: 16px 48px;
+    border-radius: 12px;
+    font-size: 1.1em;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(0,255,0,0.4);
+    transition: all 0.15s;
+    margin-top: 8px;
+    min-height: 56px;
+    min-width: 240px;
+  }
+  .new-game-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 40px rgba(0,255,0,0.7);
+  }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255,0,0,0.96);
+    color: #fff; padding: 20px 50px;
+    border-radius: 12px; font-size: 2em;
+    font-weight: bold; z-index: 20;
+    display: none; box-shadow: 0 0 40px #f00;
+    text-transform: uppercase; letter-spacing: 3px;
+    white-space: nowrap;
+  }
+  .toast.show { display: block; animation: pop 0.35s; }
+  @keyframes pop {
+    0% { transform: translate(-50%,-50%) scale(0.5); opacity: 0; }
+    100% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  }
+
+  /* ============ VOLLBILD-BUTTON ============ */
+  .fullscreen-btn {
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #1b263b;
+    color: #a0c4ff; width: 36px; height: 36px;
+    border-radius: 20px; cursor: pointer;
+    font-size: 1em; transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .fullscreen-btn:active { transform: scale(0.9); border-color: #0f0; }
+
+  /* ============ MEDIA QUERIES ============ */
+  @media (orientation: portrait) and (max-width: 600px) {
+    .main-score { font-size: clamp(5em, 18vh, 10em); }
+    .bottom-panel { height: 80px; }
+    .player-panel .p-score { font-size: 1.7em; }
+    .header { padding: 8px 10px; }
+    .stats { font-size: 0.7em; }
+    .player-name { font-size: 0.95em; max-width: 35vw; }
+    .bt-status { font-size: 0.65em; padding: 8px; width: 34px; justify-content: center; }
+    .bt-status span { display: none; }
+    .manual-input { padding: 6px; gap: 4px; max-height: 50vh; }
+    .manual-input button {
+      min-width: 40px; height: 40px; font-size: 0.85em; padding: 0 6px;
+    }
+    .manual-input button.wide { min-width: 68px; }
+    .manual-input button.mult { min-width: 58px; font-size: 0.8em; }
+    .cricket-table th, .cricket-table td { padding: 2px 2px; font-size: 0.8em; }
+    .cricket-table th.num-col, .cricket-table td.num-col {
+      width: 38px; font-size: 0.9em;
+    }
+    .cricket-table td.marks { font-size: 0.85em; }
+    .cricket-table td.marks .hit { font-size: 0.9em; }
+    .round-banner { font-size: 0.85em; letter-spacing: 3px; padding: 3px 14px; }
+    .mode-badge { font-size: 0.7em; padding: 3px 10px; letter-spacing: 1px; }
+    .overlay h1 { font-size: 1.6em; }
+    .setup-row button, .setup-row select {
+      padding: 12px 18px; font-size: 0.95em; min-height: 48px;
+    }
+    .winner-name { letter-spacing: 3px; }
+    .new-game-btn { min-width: 200px; padding: 14px 36px; }
+  }
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    .main-score { font-size: min(28vh, 14vw); }
+    .header { padding: 4px 12px; min-height: 40px; }
+    .bottom-panel { height: 62px; }
+    .player-panel .p-score { font-size: 1.35em; }
+    .player-panel .p-name { font-size: 0.65em; }
+    .manual-input { padding: 5px 6px; gap: 4px; max-height: 40vh; }
+    .manual-input button { min-width: 40px; height: 40px; font-size: 0.85em; }
+    .manual-input button.wide { min-width: 66px; }
+    .cricket-table th, .cricket-table td { padding: 1px 3px; font-size: 0.8em; }
+    .round-banner { font-size: 0.8em; padding: 2px 14px; margin-bottom: 0; }
+    .overlay h1 { font-size: 1.5em; }
+    .overlay { gap: 8px; padding: 12px; }
+    .setup-row button, .setup-row select {
+      padding: 10px 20px; min-height: 44px; font-size: 0.95em;
+    }
+    .start-btn { min-height: 52px !important; padding: 14px 30px !important; }
+    .winner-overlay { gap: 12px; padding: 12px; }
+    .new-game-btn { min-height: 48px; padding: 12px 36px; }
+    .winner-stats { padding: 6px 16px; }
+  }
+
+  @media (min-width: 601px) and (max-width: 1024px) {
+    .main-score { font-size: clamp(6em, 24vh, 14em); }
+    .manual-input button { min-width: 52px; height: 52px; font-size: 1em; }
+    .manual-input button.wide { min-width: 90px; }
+    .bottom-panel { height: 90px; }
+    .player-panel .p-score { font-size: 1.9em; }
+  }
+
+  @media (max-height: 400px) {
+    .header { min-height: 36px; padding: 3px 10px; }
+    .round-banner { padding: 2px 12px; font-size: 0.75em; }
+    .bottom-panel { height: 55px; }
+    .player-panel .p-score { font-size: 1.25em; }
+    .player-panel .p-name { font-size: 0.6em; }
+    .manual-input { padding: 4px; gap: 3px; }
+    .manual-input button { min-width: 36px; height: 36px; font-size: 0.75em; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="bt-status" id="btStatus" title="Klicken zum Verbinden">
+        <div class="bt-dot" id="btDot"></div>
+        <span id="btText">BT</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="stats">
+        <span>⌀ <span class="stat-val" id="avgDisplay">0.0</span></span> ·
+        <span>🎯 <span class="stat-val" id="dartsDisplay">0</span></span>
+      </div>
+      <div class="player-name" id="playerName">SPIELER 1</div>
+      <div class="fullscreen-btn" id="fsBtn" title="Vollbild">⛶</div>
+    </div>
+  </div>
+
+  <div class="main-area">
+    <div class="top-badges">
+      <div class="round-banner">
+        Runde <span class="rn" id="roundNumber">1</span>
+      </div>
+      <div class="mode-badge" id="modeBadge" style="display:none">
+        <span class="di" id="diLabel">Straight</span>
+        <span class="off"> · </span>
+        <span class="do" id="doLabel">Double</span>
+      </div>
+    </div>
+    <div class="main-content">
+      <div class="cricket-board" id="cricketBoard" style="display:none">
+        <table class="cricket-table" id="cricketTable"></table>
+      </div>
+      <div class="main-score" id="mainScore">501</div>
+      <div class="double-in-hint" id="doubleInHint">Öffne mit Doppel!</div>
+    </div>
+  </div>
+
+  <div class="bottom-panel" id="bottomPanel"></div>
+
+  <div class="manual-input" id="manualInput">
+    <button class="mult active" data-mult="1">Einfach</button>
+    <button class="mult" data-mult="2">Doppelt</button>
+    <button class="mult" data-mult="3">Dreifach</button>
+    <div class="sep"></div>
+    <button data-num="0" class="wide">Daneben</button>
+    <button data-num="1">1</button>
+    <button data-num="2">2</button>
+    <button data-num="3">3</button>
+    <button data-num="4">4</button>
+    <button data-num="5">5</button>
+    <button data-num="6">6</button>
+    <button data-num="7">7</button>
+    <button data-num="8">8</button>
+    <button data-num="9">9</button>
+    <button data-num="10">10</button>
+    <button data-num="11">11</button>
+    <button data-num="12">12</button>
+    <button data-num="13">13</button>
+    <button data-num="14">14</button>
+    <button data-num="15">15</button>
+    <button data-num="16">16</button>
+    <button data-num="17">17</button>
+    <button data-num="18">18</button>
+    <button data-num="19">19</button>
+    <button data-num="20">20</button>
+    <button data-num="25" class="wide">Bull</button>
+    <div class="sep"></div>
+    <button id="undoBtn" class="undo wide">↩ Zurück</button>
+  </div>
+
+  <!-- SETUP OVERLAY -->
+  <div class="overlay" id="setupOverlay">
+    <h1>🎯 DART <span>RECHNER</span></h1>
+    <div class="setup-row" id="gameRow">
+      <button data-game="301">301</button>
+      <button data-game="501" class="active">501</button>
+      <button data-game="Cricket">Cricket</button>
+    </div>
+
+    <!-- In / Out Modus (nur 301/501) -->
+    <div class="setup-row mode-row" id="modeRow">
+      <div class="mode-col">
+        <label>In-Modus</label>
+        <select id="inMode">
+          <option value="straight">Straight In</option>
+          <option value="double">Double In</option>
+        </select>
+      </div>
+      <div class="mode-col">
+        <label>Out-Modus</label>
+        <select id="outMode">
+          <option value="straight">Straight Out</option>
+          <option value="double" selected>Double Out</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="setup-row">
+      <select id="playerCount">
+        <option value="1">1 Spieler (Solo)</option>
+        <option value="2" selected>2 Spieler</option>
+        <option value="3">3 Spieler</option>
+        <option value="4">4 Spieler</option>
+      </select>
+    </div>
+    <div class="setup-row">
+      <button class="start-btn" id="startBtn" type="button">Spiel starten</button>
+    </div>
+  </div>
+
+  <!-- GEWINNER OVERLAY -->
+  <div class="winner-overlay" id="winnerOverlay">
+    <div class="trophy">🏆</div>
+    <div class="winner-title">Gewinner</div>
+    <div class="winner-name" id="winnerName">SPIELER</div>
+    <div class="winner-stats" id="winnerStats"></div>
+    <button class="new-game-btn" id="newGameBtn" type="button">Neues Spiel</button>
+  </div>
+
+  <div class="toast" id="toast">Überworfen!</div>
+</div>
+
+<script>
+/* =========================================================================
+   STATE
+   ========================================================================= */
+let state = {
+  game: '501',
+  inMode: 'straight',
+  outMode: 'double',
+  players: [],
+  current: 0,
+  dartsThisTurn: [],
+  turnStartScore: 0,
+  round: 1,
+  winner: null,
+  history: [],
+  totalScored: [],
+  dartsThrown: []
+};
+let currentMultiplier = 1;
+let isBluetoothConnected = false;
+let throwLock = false;
+
+/* =========================================================================
+   DOM
+   ========================================================================= */
+const btStatus      = document.getElementById('btStatus');
+const btDot         = document.getElementById('btDot');
+const btText        = document.getElementById('btText');
+const playerName    = document.getElementById('playerName');
+const mainScore     = document.getElementById('mainScore');
+const avgDisplay    = document.getElementById('avgDisplay');
+const dartsDisplay  = document.getElementById('dartsDisplay');
+const roundNumber   = document.getElementById('roundNumber');
+const bottomPanel   = document.getElementById('bottomPanel');
+const cricketBoard  = document.getElementById('cricketBoard');
+const cricketTable  = document.getElementById('cricketTable');
+const setupOverlay  = document.getElementById('setupOverlay');
+const manualInput   = document.getElementById('manualInput');
+const toast         = document.getElementById('toast');
+const fsBtn         = document.getElementById('fsBtn');
+const winnerOverlay = document.getElementById('winnerOverlay');
+const winnerName    = document.getElementById('winnerName');
+const winnerStats   = document.getElementById('winnerStats');
+const newGameBtn    = document.getElementById('newGameBtn');
+const modeRow       = document.getElementById('modeRow');
+const inModeSelect  = document.getElementById('inMode');
+const outModeSelect = document.getElementById('outMode');
+const modeBadge     = document.getElementById('modeBadge');
+const diLabel       = document.getElementById('diLabel');
+const doLabel       = document.getElementById('doLabel');
+const doubleInHint  = document.getElementById('doubleInHint');
+
+const CRICKET_NUMBERS = [20, 19, 18, 17, 16, 15, 25];
+
+/* =========================================================================
+   VOLLBILD
+   ========================================================================= */
+fsBtn.addEventListener('click', () => {
+  try {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.webkitRequestFullScreen) el.webkitRequestFullScreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  } catch (e) { console.warn('Vollbild nicht möglich:', e); }
+});
+
+/* =========================================================================
+   BT-ABHÄNGIGE SICHTBARKEIT
+   ========================================================================= */
+function updateManualInputVisibility() {
+  if (state.winner) {
+    manualInput.classList.add('hidden');
+    return;
+  }
+  if (isBluetoothConnected) manualInput.classList.add('hidden');
+  else manualInput.classList.remove('hidden');
+}
+
+/* =========================================================================
+   SPIELVORBEREITUNG
+   ========================================================================= */
+document.querySelectorAll('#gameRow button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#gameRow button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.game = btn.dataset.game;
+
+    // Mode-Row ausblenden bei Cricket
+    if (state.game === 'Cricket') {
+      modeRow.classList.add('hidden');
+    } else {
+      modeRow.classList.remove('hidden');
+    }
+  });
+});
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  try {
+    const count = parseInt(document.getElementById('playerCount').value);
+
+    // In/Out Modus auswählen (nur für 301/501)
+    const inMode = state.game === 'Cricket' ? 'straight' : inModeSelect.value;
+    const outMode = state.game === 'Cricket' ? 'straight' : outModeSelect.value;
+
+    state = {
+      game: state.game,
+      inMode: inMode,
+      outMode: outMode,
+      players: [],
+      current: 0,
+      dartsThisTurn: [],
+      turnStartScore: 0,
+      round: 1,
+      winner: null,
+      history: [],
+      totalScored: [],
+      dartsThrown: []
+    };
+
+    const needsOpen = (state.inMode === 'double' && state.game !== 'Cricket');
+
+    for (let i = 0; i < count; i++) {
+      const marks = {}, scored = {};
+      CRICKET_NUMBERS.forEach(n => { marks[n] = 0; scored[n] = 0; });
+      state.players.push({
+        name: count === 1 ? 'SOLO' : 'SPIELER ' + (i + 1),
+        score: state.game === 'Cricket' ? 0 : parseInt(state.game),
+        marks: marks,
+        scored: scored,
+        hasStarted: !needsOpen   // true wenn Straight In oder Cricket
+      });
+    }
+    state.turnStartScore = state.players[0].score;
+    state.totalScored = new Array(count).fill(0);
+    state.dartsThrown = new Array(count).fill(0);
+
+    // Mode-Badge aktualisieren
+    updateModeBadge();
+
+    winnerOverlay.classList.remove('show');
+    setupOverlay.style.display = 'none';
+    render();
+  } catch (e) {
+    console.error('Fehler beim Spielstart:', e);
+    alert('Fehler beim Start: ' + e.message);
+  }
+});
+
+function updateModeBadge() {
+  if (state.game === 'Cricket') {
+    modeBadge.style.display = 'none';
+    return;
+  }
+  modeBadge.style.display = 'inline-block';
+  diLabel.textContent = state.inMode === 'double' ? 'Double In' : 'Straight In';
+  doLabel.textContent = state.outMode === 'double' ? 'Double Out' : 'Straight Out';
+  diLabel.className = state.inMode === 'double' ? 'di' : 'off';
+  doLabel.className = state.outMode === 'double' ? 'do' : 'off';
+}
+
+/* =========================================================================
+   MANUELLE EINGABE
+   ========================================================================= */
+document.querySelectorAll('.manual-input button.mult').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.manual-input button.mult').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMultiplier = parseInt(btn.dataset.mult);
+  });
+});
+document.querySelectorAll('.manual-input button[data-num]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (throwLock) return;
+    throwLock = true;
+    setTimeout(() => { throwLock = false; }, 80);
+    try {
+      throwDart(parseInt(btn.dataset.num), currentMultiplier);
+    } catch (e) {
+      console.error('Fehler beim Wurf:', e);
+    }
+  });
+});
+document.getElementById('undoBtn').addEventListener('click', () => {
+  try { undo(); } catch (e) { console.error('Fehler bei Undo:', e); }
+});
+
+/* =========================================================================
+   NEUES SPIEL
+   ========================================================================= */
+newGameBtn.addEventListener('click', () => {
+  winnerOverlay.classList.remove('show');
+  setupOverlay.style.display = 'flex';
+  document.querySelectorAll('#gameRow button').forEach(b => b.classList.remove('active'));
+  const activeGame = document.querySelector('#gameRow button[data-game="' + state.game + '"]')
+    || document.querySelector('#gameRow button[data-game="501"]');
+  if (activeGame) activeGame.classList.add('active');
+
+  // Mode-Row aktualisieren
+  if (state.game === 'Cricket') modeRow.classList.add('hidden');
+  else modeRow.classList.remove('hidden');
+});
+
+/* =========================================================================
+   SPIELLOGIK
+   ========================================================================= */
+function throwDart(num, mult) {
+  if (!state || !state.players || !state.players.length) return;
+  if (state.winner) return;
+  if (typeof num !== 'number' || typeof mult !== 'number') return;
+  if (num === 25 && mult === 3) return;
+  if (num > 20 && num !== 25 && num !== 0) return;
+  if (state.current < 0 || state.current >= state.players.length) return;
+
+  const player = state.players[state.current];
+  if (!player) return;
+
+  try {
+    state.history.push(JSON.parse(JSON.stringify(state)));
+    if (state.history.length > 50) state.history.shift();
+  } catch (e) { console.warn('History-Snapshot fehlgeschlagen:', e); }
+
+  const value = num * mult;
+  const isDouble = (mult === 2);
+
+  // Punktestand am Anfang des Durchgangs merken
+  if (state.dartsThisTurn.length === 0) {
+    state.turnStartScore = player.score;
+  }
+
+  state.dartsThisTurn.push({ num, mult, value });
+
+  /* ================== 301 / 501 ================== */
+  if (state.game === '301' || state.game === '501') {
+
+    /* --- DOUBLE-IN PRÜFUNG --- */
+    if (state.inMode === 'double' && !player.hasStarted) {
+      state.dartsThrown[state.current]++;
+
+      if (isDouble) {
+        // Gültig geöffnet – normal weiterscoren
+        player.hasStarted = true;
+        // fall through
+      } else {
+        // Keine Wertung, nur Wurf zählen
+        if (state.dartsThisTurn.length >= 3) {
+          endTurn();
+        } else {
+          render();
+        }
+        return;
+      }
+    }
+
+    const newScore = player.score - value;
+
+    /* --- BUST-PRÜFUNG --- */
+    const isBust =
+      newScore < 0 ||
+      newScore === 1 ||
+      (newScore === 0 && state.outMode === 'double' && !isDouble);
+
+    if (isBust) {
+      player.score = state.turnStartScore;
+      state.dartsThisTurn = [];
+      showToast('Überworfen!');
+      endTurn();
+      return;
+    }
+
+    player.score = newScore;
+    state.totalScored[state.current] += value;
+    state.dartsThrown[state.current]++;
+
+    if (newScore === 0) {
+      declareWinner(player);
+      return;
+    }
+  } 
+  /* ================== CRICKET ================== */
+  else if (state.game === 'Cricket') {
+    state.totalScored[state.current] += value;
+    state.dartsThrown[state.current]++;
+
+    const key = num === 25 ? 25 : num;
+    if (CRICKET_NUMBERS.includes(key)) {
+      const currentMarks = player.marks[key] || 0;
+      const newMarks = Math.min(3, currentMarks + mult);
+      player.marks[key] = newMarks;
+
+      let scoringMarks = 0;
+      if (currentMarks >= 3) scoringMarks = mult;
+      else scoringMarks = Math.max(0, currentMarks + mult - 3);
+
+      if (scoringMarks > 0) {
+        const opponentOpen = state.players.some((p, i) =>
+          i !== state.current && (p.marks[key] || 0) < 3
+        );
+        if (opponentOpen) {
+          const points = key * scoringMarks;
+          player.score += points;
+          player.scored[key] = (player.scored[key] || 0) + points;
+        }
+      }
+
+      const allClosed = CRICKET_NUMBERS.every(k => (player.marks[k] || 0) >= 3);
+      if (allClosed) {
+        if (state.players.length === 1) {
+          declareWinner(player);
+          return;
+        }
+        const otherScores = state.players
+          .filter((p, i) => i !== state.current)
+          .map(p => p.score);
+        const maxOther = otherScores.length ? Math.max(...otherScores) : 0;
+        if (player.score >= maxOther) {
+          declareWinner(player);
+          return;
+        }
+      }
+    }
+  }
+
+  if (state.dartsThisTurn.length >= 3 && !state.winner) {
+    endTurn();
+  } else {
+    render();
+  }
+}
+
+/* =========================================================================
+   GEWINNER ERKLÄREN
+   ========================================================================= */
+function declareWinner(player) {
+  if (!player) return;
+  state.winner = player;
+  state.dartsThisTurn = [];
+  render();
+  showWinnerOverlay(player);
+}
+
+function showWinnerOverlay(player) {
+  try {
+    winnerName.textContent = player.name;
+
+    const idx = state.players.indexOf(player);
+    const thrown = idx >= 0 ? (state.dartsThrown[idx] || 0) : 0;
+    const scored = idx >= 0 ? (state.totalScored[idx] || 0) : 0;
+    const avg = thrown > 0 ? (scored / thrown).toFixed(1) : '0.0';
+
+    let statsHtml = '<div class="stat-box"><span class="stat-lbl">Runden</span><span class="stat-num">' + state.round + '</span></div>' +
+                    '<div class="stat-box"><span class="stat-lbl">Pfeile</span><span class="stat-num">' + thrown + '</span></div>' +
+                    '<div class="stat-box"><span class="stat-lbl">Schnitt</span><span class="stat-num">' + avg + '</span></div>';
+
+    if (state.game === 'Cricket') {
+      const fields = CRICKET_NUMBERS.filter(n => (player.marks[n] || 0) >= 3).length;
+      statsHtml += '<div class="stat-box"><span class="stat-lbl">Felder zu</span><span class="stat-num">' + fields + '/' + CRICKET_NUMBERS.length + '</span></div>';
+    } else {
+      statsHtml += '<div class="stat-box"><span class="stat-lbl">Modus</span><span class="stat-num">' + (state.inMode === 'double' ? 'DI' : 'SI') + ' / ' + (state.outMode === 'double' ? 'DO' : 'SO') + '</span></div>';
+    }
+    winnerStats.innerHTML = statsHtml;
+
+    winnerOverlay.classList.add('show');
+  } catch (e) {
+    console.error('Fehler beim Winner-Overlay:', e);
+    alert('🏆 ' + player.name + ' GEWINNT!');
+  }
+}
+
+/* =========================================================================
+   DURCHGANG BEENDEN
+   ========================================================================= */
+function endTurn() {
+  if (!state.players.length) return;
+  state.dartsThisTurn = [];
+
+  if (state.players.length === 1) {
+    state.round++;
+  } else {
+    state.current = (state.current + 1) % state.players.length;
+    if (state.current === 0) state.round++;
+  }
+
+  if (state.current >= state.players.length || state.current < 0) {
+    state.current = 0;
+  }
+
+  state.turnStartScore = state.players[state.current].score;
+
+  currentMultiplier = 1;
+  document.querySelectorAll('.manual-input button.mult').forEach(b => b.classList.remove('active'));
+  const single = document.querySelector('.manual-input button.mult[data-mult="1"]');
+  if (single) single.classList.add('active');
+
+  render();
+}
+
+/* =========================================================================
+   UNDO
+   ========================================================================= */
+function undo() {
+  if (!state.history.length) return;
+  const prev = state.history.pop();
+  if (prev && prev.players) {
+    state = prev;
+    render();
+  }
+}
+
+/* =========================================================================
+   TOAST
+   ========================================================================= */
+function showToast(text) {
+  toast.textContent = text;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 900);
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function render() {
+  if (!state || !state.players || !state.players.length) return;
+  if (state.current >= state.players.length || state.current < 0) state.current = 0;
+
+  const player = state.players[state.current];
+  if (!player) return;
+
+  playerName.textContent = state.winner
+    ? '🏆 ' + state.winner.name
+    : player.name;
+
+  roundNumber.textContent = state.round;
+
+  const thrown = state.dartsThrown[state.current] || 0;
+  const scored = state.totalScored[state.current] || 0;
+  const avg = thrown > 0 ? (scored / thrown).toFixed(1) : '0.0';
+  avgDisplay.textContent = avg;
+  dartsDisplay.textContent = thrown;
+
+  // Double-In Hinweis
+  const needsOpen = (state.game === '501' || state.game === '301') &&
+                    state.inMode === 'double' &&
+                    !player.hasStarted &&
+                    !state.winner;
+  if (needsOpen) {
+    doubleInHint.classList.add('show');
+  } else {
+    doubleInHint.classList.remove('show');
+  }
+
+  if (state.game === 'Cricket') {
+    mainScore.style.display = 'none';
+    cricketBoard.style.display = 'flex';
+    renderCricketTable();
+  } else {
+    cricketBoard.style.display = 'none';
+    mainScore.style.display = 'block';
+    mainScore.textContent = state.winner ? '✓' : player.score;
+  }
+
+  bottomPanel.classList.toggle('solo', state.players.length === 1);
+  bottomPanel.innerHTML = '';
+  state.players.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'player-panel ' + (i % 2 === 0 ? 'blue' : 'red');
+    if (i === state.current && !state.winner) div.classList.add('active');
+    if (state.winner === p) div.classList.add('winner');
+    // Double-In: nicht geöffnet → dimmen
+    if ((state.game === '501' || state.game === '301') &&
+        state.inMode === 'double' && !p.hasStarted) {
+      div.classList.add('not-opened');
+    }
+    div.innerHTML = '<div class="p-name">' + p.name + '</div><div class="p-score">' + p.score + '</div>';
+    bottomPanel.appendChild(div);
+  });
+
+  updateManualInputVisibility();
+}
+
+/* =========================================================================
+   CRICKET-TABELLE
+   ========================================================================= */
+function renderCricketTable() {
+  try {
+    let html = '<thead><tr>';
+    html += '<th class="num-col">Feld</th>';
+    state.players.forEach((p, i) => {
+      let cls = 'player-header';
+      if (i === state.current && !state.winner) cls += ' active-col';
+      if (state.winner === p) cls += ' winner-col';
+      const shortName = state.players.length === 1 ? 'SOLO' : p.name.replace('SPIELER ', 'S');
+      html += '<th class="' + cls + '">' + shortName + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    CRICKET_NUMBERS.forEach(num => {
+      const label = num === 25 ? 'Bull' : num;
+      const allClosed = state.players.every(p => (p.marks[num] || 0) >= 3);
+
+      html += '<tr' + (allClosed ? ' class="closed-row"' : '') + '>';
+      html += '<td class="num-col">' + label + '</td>';
+
+      state.players.forEach((p, i) => {
+        const marks = p.marks[num] || 0;
+        const scoredPts = p.scored[num] || 0;
+        const closed = marks >= 3;
+
+        const opponentOpen = state.players.some((op, j) =>
+          j !== i && (op.marks[num] || 0) < 3
+        );
+
+        const rowCls = (i === state.current && !state.winner) ? 'active-col' : '';
+
+        let inner = '';
+        if (marks > 0) inner += '<span class="hit">' + '🎯'.repeat(marks) + '</span>';
+
+        if (closed && opponentOpen && scoredPts > 0) {
+          inner += '<span class="extra"><span class="pts">+' + scoredPts + '</span></span>';
+        }
+
+        const tdCls = 'marks' + (closed ? ' closed' : '') + (rowCls ? ' ' + rowCls : '');
+        html += '<td class="' + tdCls + '">' + inner + '</td>';
+      });
+      html += '</tr>';
+    });
+
+    html += '<tr style="border-top:2px solid #ff4444">';
+    html += '<td class="num-col" style="color:#ff4444">Pkt</td>';
+    state.players.forEach((p, i) => {
+      const rowCls = (i === state.current && !state.winner) ? 'active-col' : '';
+      html += '<td class="points ' + rowCls + '">' + p.score + '</td>';
+    });
+    html += '</tr>';
+
+    html += '</tbody>';
+    cricketTable.innerHTML = html;
+  } catch (e) {
+    console.error('Cricket-Tabelle Fehler:', e);
+  }
+}
+
+/* =========================================================================
+   BLUETOOTH
+   ========================================================================= */
+const DART_SERVICE_UUID        = '0000ffe0-0000-1000-8000-00805f9b34fb';
+const DART_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+const DEVICE_NAME_PREFIX       = 'CB-';
+
+let bleDevice = null;
+let bleServer = null;
+let dartChar  = null;
+
+btStatus.addEventListener('click', async () => {
+  if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+    bleDevice.gatt.disconnect();
+    return;
+  }
+  await connectDartboard();
+});
+
+async function connectDartboard() {
+  if (!navigator.bluetooth) {
+    alert('Bluetooth wird von diesem Browser nicht unterstützt.\n' +
+          'Bitte Chrome für Android verwenden.\n' +
+          'Die Seite muss über http://localhost oder HTTPS geöffnet werden.');
+    return;
+  }
+
+  try {
+    btDot.className = 'bt-dot connecting';
+    btText.textContent = 'Suche';
+
+    bleDevice = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: DEVICE_NAME_PREFIX }],
+      optionalServices: [DART_SERVICE_UUID]
+    });
+
+    bleDevice.addEventListener('gattserverdisconnected', () => {
+      bleDevice = null; bleServer = null; dartChar = null;
+      isBluetoothConnected = false;
+      btDot.className = 'bt-dot';
+      btText.textContent = 'BT';
+      updateManualInputVisibility();
+    });
+
+    btText.textContent = 'Verbinde';
+    bleServer = await bleDevice.gatt.connect();
+
+    const service = await bleServer.getPrimaryService(DART_SERVICE_UUID);
+    dartChar = await service.getCharacteristic(DART_CHARACTERISTIC_UUID);
+
+    await dartChar.startNotifications();
+    dartChar.addEventListener('characteristicvaluechanged', handleBleData);
+
+    isBluetoothConnected = true;
+    btDot.className = 'bt-dot connected';
+    btText.textContent = 'OK';
+    updateManualInputVisibility();
+  } catch (err) {
+    console.error('Bluetooth-Fehler:', err);
+    isBluetoothConnected = false;
+    btDot.className = 'bt-dot';
+    btText.textContent = '!';
+    updateManualInputVisibility();
+  }
+}
+
+function handleBleData(event) {
+  try {
+    const value = event.target.value;
+    const bytes = new Uint8Array(value.buffer);
+    console.log('Bluetooth empfangen:', bytes);
+
+    let num  = bytes[0];
+    let mult = bytes[1] || 1;
+
+    if (num > 25) num = 0;
+    if (mult < 1 || mult > 3) mult = 1;
+
+    throwDart(num, mult);
+  } catch (e) {
+    console.error('Fehler bei BLE-Daten:', e);
+  }
+}
+
+/* =========================================================================
+   GLOBALER FEHLERFANG
+   ========================================================================= */
+window.addEventListener('error', (e) => {
+  console.error('Globaler Fehler:', e.error || e.message);
+});
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+updateModeBadge();
+render();
+</script>
+</body>
+</html>
